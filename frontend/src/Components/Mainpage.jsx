@@ -23,6 +23,11 @@ const Mainpage = () => {
         try {
             if (!encryptFile) return alert("Please select an image to encrypt.");
 
+            if (encryptFile.size > 10 * 1024 * 1024) {
+                return alert("❌ Image must be smaller than 10MB.");
+            }
+
+
             const form = new FormData();
             form.append("image", encryptFile);
 
@@ -30,6 +35,11 @@ const Mainpage = () => {
                 method: "POST",
                 body: form,
             });
+
+            if (res.status === 500) {
+                alert("❌ Image too large. Please upload an image smaller than 10MB.");
+                return;
+            }
 
             if (!res.ok) return alert("Encryption failed.");
 
@@ -47,7 +57,7 @@ const Mainpage = () => {
             }
         } catch (err) {
             console.log("Encryption Error:", err);
-            alert("Encryption failed. See console for details.");
+            alert("Encryption failed");
         }
     };
 
@@ -72,12 +82,29 @@ const Mainpage = () => {
         const url = URL.createObjectURL(data);
         window.open(url, "_blank");
     };
+    const downloadFileFromUrl = async (url, filename) => {
+        try {
+            const response = await fetch(url);
+            const blob = await response.blob();
+
+            const tempUrl = window.URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = tempUrl;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            window.URL.revokeObjectURL(tempUrl);
+        } catch (err) {
+            console.error("Download failed:", err);
+        }
+    };
 
 
     return (
         <div className="m-5">
             <p className="text-red-400 text-center">! Attention</p>
-            <p className="text-center text-red-400">Encrypted Image and coded key file <br/>will not save after reload</p>
+            <p className="text-center text-red-400">Encrypted Image and coded key file <br />will not save after reload</p>
             <div className="p-4  flex flex-col items-center border-2 rounded-3xl mt-5">
                 <h1 className="text-orange-400 text-4xl mt-5">PixelCrypt</h1>
                 <h2 className="text-xl font-semibold mb-2 mt-5">🔐 Encrypt Image</h2>
@@ -99,6 +126,12 @@ const Mainpage = () => {
                 <input
                     onChange={(e) => {
                         const file = e.target.files[0];
+                        if (file.size > 10 * 1024 * 1024) {
+                            alert("❌ Selected image is larger than 10MB.");
+                            setEncryptPreview(null);
+                            setEncryptFile(null);
+                            return;
+                        }
                         setEncryptPreview(file);
                         setEncryptFile(file);
                     }}
@@ -116,7 +149,7 @@ const Mainpage = () => {
                 </button>
                 <p className="mt-4">Max image upload size 10 mb</p>
 
-                <hr className="my-3 border-[1px] border-white w-[80%]"/>
+                <hr className="my-3 border-[1px] border-white w-[80%]" />
                 <h2 className="text-xl font-semibold mb-2">🔓 Decrypt Image</h2>
                 <div className="mb-2">
                     <label htmlFor="decrypt-image" className="cursor-pointer">
@@ -167,13 +200,17 @@ const Mainpage = () => {
                     Decrypt
                 </button>
                 {encryptedUrl && (
-                    <a href={encryptedUrl} target="_blank" rel="noopener noreferrer" className="text-blue-600 flex mb-5">
-                       <IoMdDownload size={25}/> Download Encrypted Image
-                    </a>
+                    <button
+                        onClick={() => downloadFileFromUrl(encryptedUrl, "encrypted_image.png")}
+                        className="text-blue-600 flex items-center gap-2 mb-5"
+                    >
+                        <IoMdDownload size={25} /> Download Encrypted Image
+                    </button>
                 )}
+
                 {keyUrl && (
                     <a href={keyUrl} target="_blank" rel="noopener noreferrer" className="text-green-600 flex gap-3 mb-3">
-                         <ImFolderDownload size={20}/> Download Key File
+                        <ImFolderDownload size={20} /> Download Key File
                     </a>
                 )}
             </div>
