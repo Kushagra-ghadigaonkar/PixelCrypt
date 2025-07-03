@@ -5,7 +5,7 @@ import { IoMdDownload } from "react-icons/io";
 import { ImFolderDownload } from "react-icons/im";
 
 const Mainpage = () => {
-    const host = "http://localhost:5000"
+    const host = "https://pixelcrypt.onrender.com"
     const [encryptPreview, setEncryptPreview] = useState(null);
     const [decryptPreview, setDecryptPreview] = useState(null);
     const [encryptFile, setEncryptFile] = useState(null);
