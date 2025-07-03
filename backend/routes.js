@@ -4,7 +4,9 @@ const encrypt = require("./encrypt");
 const decrypt = require("./decrypt");
 
 const router = express.Router();
-const upload = multer({ storage: multer.memoryStorage() });
+const upload = multer({ storage: multer.memoryStorage(),
+  limits: { fileSize: 10 * 1024 * 1024 },
+});
 
 // 🔐 Encrypt Route
 router.post("/api/encrypt", upload.single("image"), async (req, res) => {
@@ -21,6 +23,9 @@ router.post("/api/encrypt", upload.single("image"), async (req, res) => {
     });
   } catch (err) {
     console.error("Encryption error:", err);
+    if (err.code === "LIMIT_FILE_SIZE") {
+      return res.status(500).json({ error: "Image must be less than 10 MB." });
+    }
     res.status(500).json({ error: err.message });
   }
 });
