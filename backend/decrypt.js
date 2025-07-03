@@ -1,37 +1,30 @@
-const fs = require("fs");
 const sharp = require("sharp");
 
-const decrypt = async (imagePath, keyPath, outputPath) => {
+const decrypt = async (imageBuffer, keyBuffer) => {
   try {
-    // Read encrypted image as raw data
-    const image = sharp(imagePath);
+    const key = Buffer.from(keyBuffer.toString(), "base64");
+
+    const image = sharp(imageBuffer);
     const { data, info } = await image.raw().toBuffer({ resolveWithObject: true });
 
-    // Read and decode the key
-    const keyBase64 = fs.readFileSync(keyPath, "utf-8");
-    const keyBuffer = Buffer.from(keyBase64, "base64");
-
-    if (keyBuffer.length !== data.length) {
+    if (key.length !== data.length) {
       throw new Error("Key length doesn't match image data length");
     }
 
-    // XOR decrypt
     const decrypted = Buffer.alloc(data.length);
     for (let i = 0; i < data.length; i++) {
-      decrypted[i] = data[i] ^ keyBuffer[i];
+      decrypted[i] = data[i] ^ key[i];
     }
 
-    // Write the decrypted image
-    await sharp(decrypted, {
+    const outputBuffer = await sharp(decrypted, {
       raw: {
         width: info.width,
         height: info.height,
         channels: info.channels,
       },
-    })
-      .png()
-      .toFile(outputPath);
+    }).png().toBuffer();
 
+    return outputBuffer;
   } catch (err) {
     throw new Error("Decryption Failed: " + err.message);
   }

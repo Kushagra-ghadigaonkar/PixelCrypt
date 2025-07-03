@@ -1,10 +1,26 @@
-const fs = require("fs");
 const sharp = require("sharp");
+const cloudinary = require("./cloudinary");
 
-const encrypt = async (inputPath, outputPath, keyPath) => {
+const uploadBufferToCloudinary = (buffer, folder, filename, resourceType = "image") => {
+  return new Promise((resolve, reject) => {
+    const stream = cloudinary.uploader.upload_stream(
+      {
+        folder,
+        public_id: filename,
+        resource_type: resourceType,
+      },
+      (error, result) => {
+        if (error) reject(error);
+        else resolve(result.secure_url);
+      }
+    );
+    stream.end(buffer);
+  });
+};
+
+const encrypt = async (inputBuffer, fileId) => {
   try {
-    const imageBuffer = fs.readFileSync(inputPath);
-    const image = sharp(imageBuffer);
+    const image = sharp(inputBuffer);
     const { data, info } = await image.raw().toBuffer({ resolveWithObject: true });
 
     const key = [];
@@ -16,15 +32,20 @@ const encrypt = async (inputPath, outputPath, keyPath) => {
       encrypted[i] = data[i] ^ k;
     }
 
-    fs.writeFileSync(keyPath, Buffer.from(key).toString("base64"));
+    const keyBuffer = Buffer.from(key).toString("base64");
 
-    await sharp(encrypted, {
+    const encryptedImageBuffer = await sharp(encrypted, {
       raw: {
         width: info.width,
         height: info.height,
-        channels: info.channels
-      }
-    }).png().toFile(outputPath);
+        channels: info.channels,
+      },
+    }).png().toBuffer();
+
+    const encryptedImageUrl = await uploadBufferToCloudinary(encryptedImageBuffer, "encrypted", `encrypted-${fileId}`);
+    const keyFileUrl = await uploadBufferToCloudinary(Buffer.from(keyBuffer), "keys", `key-${fileId}`, "raw");
+
+    return { encryptedImageUrl, keyFileUrl };
   } catch (err) {
     throw new Error("Encryption Failed: " + err.message);
   }

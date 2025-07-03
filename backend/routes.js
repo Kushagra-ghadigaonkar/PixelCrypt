@@ -1,52 +1,51 @@
 const express = require("express");
 const multer = require("multer");
-const path = require("path");
 const encrypt = require("./encrypt");
 const decrypt = require("./decrypt");
-const fs = require("fs");
 
 const router = express.Router();
+const upload = multer({ storage: multer.memoryStorage() });
 
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, "uploads/"),
-  filename: (req, file, cb) => cb(null, Date.now() + "-" + file.originalname),
-});
-
-const upload = multer({ storage });
-
-// Encrypt Route
+// 🔐 Encrypt Route
 router.post("/api/encrypt", upload.single("image"), async (req, res) => {
   try {
-    const inputPath = req.file.path;
-    const outputPath = `output/encrypted_${req.file.filename}`;
-    const keyPath = `keyfiles/key_${req.file.filename}.txt`;
+    const fileId = Date.now(); // Unique file ID
+    const inputBuffer = req.file.buffer;
 
-    await encrypt(inputPath, outputPath, keyPath);
-    res.download(outputPath); // 🔥 sends encrypted image back
+    const { encryptedImageUrl, keyFileUrl } = await encrypt(inputBuffer, fileId);
+
+    res.json({
+      message: "Encryption successful",
+      encryptedImageUrl,
+      keyFileUrl,
+    });
   } catch (err) {
     console.error("Encryption error:", err);
     res.status(500).json({ error: err.message });
   }
 });
 
-// Decrypt Route
-const decryptUpload = upload.fields([
-  { name: "image", maxCount: 1 },
-  { name: "key", maxCount: 1 },
-]);
+// 🔓 Decrypt Route
+router.post(
+  "/api/decrypt",
+  upload.fields([
+    { name: "image", maxCount: 1 },
+    { name: "key", maxCount: 1 },
+  ]),
+  async (req, res) => {
+    try {
+      const imageBuffer = req.files.image[0].buffer;
+      const keyBuffer = req.files.key[0].buffer;
 
-router.post("/api/decrypt", decryptUpload, async (req, res) => {
-  try {
-    const imagePath = req.files.image[0].path;
-    const keyPath = req.files.key[0].path;
-    const outputPath = `output/decrypted_${Date.now()}.png`;
+      const decryptedImageBuffer = await decrypt(imageBuffer, keyBuffer);
 
-    await decrypt(imagePath, keyPath, outputPath);
-    res.download(outputPath);
-  } catch (err) {
-    console.error("Decryption error:", err);
-    res.status(500).json({ error: err.message });
+      res.set("Content-Type", "image/png");
+      res.send(decryptedImageBuffer);
+    } catch (err) {
+      console.error("Decryption error:", err);
+      res.status(500).json({ error: err.message });
+    }
   }
-});
+);
 
 module.exports = router;

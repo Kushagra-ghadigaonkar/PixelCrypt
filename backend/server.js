@@ -1,22 +1,18 @@
+require("dotenv").config();
 const express = require("express");
-const routes = require("./routes");
-const fs = require("fs");
 const cors = require("cors");
+const connectDB = require("./db");
 
-const app = express(); // ✅ Define app first
-const PORT = 5000;
+const routes = require("./routes");
 
-// Enable CORS before any routes
+const app = express();
+connectDB();
 app.use(cors());
-
-// Create required folders if not exist
-["uploads", "output", "keyfiles"].forEach(folder => {
-  if (!fs.existsSync(folder)) fs.mkdirSync(folder);
-});
-
 app.use(express.json());
+
 app.use("/", routes);
 
+const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
-  console.log(`🚀 Server running on http://localhost:${PORT}`);
+  console.log(`Server running on port ${PORT}`);
 });
