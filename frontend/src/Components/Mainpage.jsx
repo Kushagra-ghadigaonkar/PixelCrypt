@@ -114,8 +114,9 @@ const Mainpage = () => {
                 >
                     Encrypt
                 </button>
+                <p className="mt-4">Max image upload size 10 mb</p>
 
-                <hr className="my-3" />
+                <hr className="my-3 border-[1px] border-white w-[80%]"/>
                 <h2 className="text-xl font-semibold mb-2">🔓 Decrypt Image</h2>
                 <div className="mb-2">
                     <label htmlFor="decrypt-image" className="cursor-pointer">
