@@ -1,39 +1,56 @@
 import React, { useState } from "react";
 import upload_img from "../assets/upload_area.png";
 import { AiOutlineCloudUpload } from "react-icons/ai";
-
+import { IoMdDownload } from "react-icons/io";
+import { ImFolderDownload } from "react-icons/im";
 
 const Mainpage = () => {
-    const host="http://localhost:5000"
+    const host = "http://localhost:5000"
     const [encryptPreview, setEncryptPreview] = useState(null);
     const [decryptPreview, setDecryptPreview] = useState(null);
     const [encryptFile, setEncryptFile] = useState(null);
     const [decryptFile, setDecryptFile] = useState(null);
     const [keyFile, setKeyFile] = useState(null);
 
+    const [encryptedUrl, setEncryptedUrl] = useState(null);
+    const [keyUrl, setKeyUrl] = useState(null);
+
+    // In encryptImage()
+
+
     // Encrypt Handler
     const encryptImage = async () => {
-        try{
+        try {
             if (!encryptFile) return alert("Please select an image to encrypt.");
 
-        const form = new FormData();
-        form.append("image", encryptFile);
+            const form = new FormData();
+            form.append("image", encryptFile);
 
-        const res = await fetch(host+"/api/encrypt", {
-            method: "POST",
-            body: form,
-        });
+            const res = await fetch(host + "/api/encrypt", {
+                method: "POST",
+                body: form,
+            });
 
-        if (!res.ok) return alert("Encryption failed.");
+            if (!res.ok) return alert("Encryption failed.");
 
-        const data = await res.blob();
-        const url = URL.createObjectURL(data);
-        window.open(url, "_blank");
-        }catch(err){
-            console.log(err)
+            const data = await res.json();
+
+            setEncryptedUrl(data.encryptedImageUrl);
+            setKeyUrl(data.keyFileUrl);
+
+            // 🔥 Show or download Cloudinary-hosted files
+            if (data.encryptedImageUrl && data.keyFileUrl) {
+                window.open(data.encryptedImageUrl, "_blank"); // Open encrypted image
+                window.open(data.keyFileUrl, "_blank"); // Open key file
+            } else {
+                alert("Encryption succeeded but no files returned.");
+            }
+        } catch (err) {
+            console.log("Encryption Error:", err);
+            alert("Encryption failed. See console for details.");
         }
-        
     };
+
 
     // Decrypt Handler
     const decryptImage = async () => {
@@ -44,7 +61,7 @@ const Mainpage = () => {
         form.append("image", decryptFile);
         form.append("key", keyFile);
 
-        const res = await fetch(host+"/api/decrypt", {
+        const res = await fetch(host + "/api/decrypt", {
             method: "POST",
             body: form,
         });
@@ -56,9 +73,12 @@ const Mainpage = () => {
         window.open(url, "_blank");
     };
 
+
     return (
         <div className="m-5">
-            <div className="p-4  flex flex-col items-center border-2 rounded-3xl mt-10">
+            <p className="text-red-400 text-center">! Attention</p>
+            <p className="text-center text-red-400">Encrypted Image and coded key file <br/>will not save after reload</p>
+            <div className="p-4  flex flex-col items-center border-2 rounded-3xl mt-5">
                 <h1 className="text-orange-400 text-4xl mt-5">PixelCrypt</h1>
                 <h2 className="text-xl font-semibold mb-2 mt-5">🔐 Encrypt Image</h2>
                 <p>Upload Image</p>
@@ -145,6 +165,16 @@ const Mainpage = () => {
                 >
                     Decrypt
                 </button>
+                {encryptedUrl && (
+                    <a href={encryptedUrl} target="_blank" rel="noopener noreferrer" className="text-blue-600 flex mb-5">
+                       <IoMdDownload size={25}/> Download Encrypted Image
+                    </a>
+                )}
+                {keyUrl && (
+                    <a href={keyUrl} target="_blank" rel="noopener noreferrer" className="text-green-600 flex gap-3 mb-3">
+                         <ImFolderDownload size={20}/> Download Key File
+                    </a>
+                )}
             </div>
         </div>
     );
